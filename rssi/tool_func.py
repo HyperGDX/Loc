@@ -14,11 +14,17 @@ def cal_2pos_dist(pos1, pos2):
 
 
 def d2rssi(d, a=-45, n=4):
+    """
+    将单个距离换算成rssi，输入的rssi为负值
+    """
     rssi = -1 * (a - 10 * n * math.log10(d))
     return rssi
 
 
 def rssi2d(rssi, a=-45, n=4):
+    """
+    将单个rssi换算成距离，输出的rssi为负值
+    """
     d = 10 ** ((a + rssi) / (10 * n))
     return d
 
@@ -57,3 +63,24 @@ def insec(p1, r1, p2, r2):
         c1 = np.array([x3, y3])
         c2 = np.array([x4, y4])
         return c1, c2
+
+
+def cal_deg(p, q, r):
+    x1 = p[0]
+    y1 = p[1]
+    x2 = q[0]
+    y2 = q[1]
+    x3 = r[0]
+    y3 = r[1]
+    try:
+        k1 = (y2-y1)/(x2-x1)
+        k2 = (y3-y2)/(x3-x2)
+        deg1 = math.degrees(math.atan(k1))
+        deg2 = math.degrees(math.atan(k2))
+        return deg2-deg1
+    except ZeroDivisionError:
+        return None
+
+
+if __name__ == "__main__":
+    print(cal_deg((0, 0), (1, 1), (2, 0)))

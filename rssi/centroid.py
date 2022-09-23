@@ -1,3 +1,4 @@
+from statistics import mean
 import numpy as np
 import tool_func
 import shapely
@@ -36,41 +37,32 @@ def cal_inter(circles):
         return None
 
 
-# def cal_inter2(circles):
+def cal_real_ext(inter):
+    inter_xy = list(inter.exterior.coords)
+    # x = [inter_xy[i][0] for i in range(len(inter_xy))]
+    # y = [inter_xy[i][1] for i in range(len(inter_xy))]
+    inter_xy_add = inter_xy + [inter_xy[0]]
+    real_ext = []
+    for i in range(len(inter_xy)-1):
+        deg = tool_func.cal_deg(inter_xy_add[i], inter_xy_add[i+1], inter_xy_add[i+2])
+        if deg == None:
+            continue
+        if abs(deg) > 10:
+            real_ext.append(inter_xy_add[i+1])
+    return real_ext
 
-#     return inter_lst
+
+def cal_centroid_norm(ext):
+    cal_cen_xs = [ext[i][0] for i in range(len(ext))]
+    cal_cen_ys = [ext[i][1] for i in range(len(ext))]
+    cal_cen_xs_mean = mean(cal_cen_xs)
+    cal_cen_ys_mean = mean(cal_cen_ys)
+    return (cal_cen_xs_mean, cal_cen_ys_mean)
 
 
-# def norm_centroid(inter_lst):
-
-#     return loc
-
-# def cal_inter(rssi_lst, beacon_lst):
-#     # 逐渐增加幅度计算交集
-#     inter = None
-#     up_rate = 0.95
-#     while not inter:
-#         up_rate += 0.05
-#         circles_parse = top_n.gen_circles_parse(rssi_lst, beacon_lst, up_rate)
-#         circles_geo = gen_circles_geo(circles_parse)
-#         inter = circles_geo[0]
-#         for i in range(1, len(circles_geo)):
-#             inter = inter.intersection(circles_geo[i])
-#         if inter:
-#             print(circles_parse)
-#             draw_circles(circles_geo)
-#             print(up_rate)
-#     return inter
 if __name__ == "__main__":
-    xy = cal_inter(gen_circle_geo(beacon_loc, test_rssi2d_gauss))
-    inter_xy = list(xy.exterior.coords)
-    x = [inter_xy[i][0] for i in range(len(inter_xy))]
-    y = [inter_xy[i][1] for i in range(len(inter_xy))]
-    print(xy.centroid)
-    print(list(xy.exterior.coords))
-
-    # plt.plot(x, y)
-
-    # plt.xlim(0, 5)
-    # plt.ylim(0, 5)
-    # plt.show()
+    inter = cal_inter(gen_circle_geo(beacon_loc, test_rssi2d_gauss))
+    real_ext = cal_real_ext(inter)
+    centroid_norm = cal_centroid_norm(real_ext)
+    print(centroid_norm)
+    print(inter.centroid)
