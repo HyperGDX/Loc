@@ -83,16 +83,15 @@ def cal_deg(p, q, r):
         return None
 
 
-def draw_xtime_yrssi(df: pd.DataFrame):
+def draw_xtime_yrssi(df_lst):
     ax = 1
-    for i in [1, 3, 6, 9]:
-        cur_d_df = df.loc[df["d"] == i]
+    for df in df_lst:
         plt.subplot(2, 2, ax)
         ax += 1
-        plt.plot([j for j in range(cur_d_df.shape[0])], cur_d_df["rssi"])
+        plt.plot([j for j in range(df.shape[0])], df["rssi"])
         plt.xlabel("time")
         plt.ylabel("rssi")
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":

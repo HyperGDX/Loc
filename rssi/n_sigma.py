@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 #     return data
 
 
-def __n_sigma_main(df: pd.DataFrame, time_start=0, time_stop=30, n=1, direct_use=False):
+def __n_sigma_main(df: pd.DataFrame, time_start, time_stop, n=1, direct_use=False):
     first_time = df.loc[0][0]
     time_start = first_time+time_start
     time_stop = time_start+time_stop
