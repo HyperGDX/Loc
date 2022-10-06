@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def cal_2pos_dist(pos1, pos2):
@@ -80,6 +81,18 @@ def cal_deg(p, q, r):
         return deg2-deg1
     except ZeroDivisionError:
         return None
+
+
+def draw_xtime_yrssi(df: pd.DataFrame):
+    ax = 1
+    for i in [1, 3, 6, 9]:
+        cur_d_df = df.loc[df["d"] == i]
+        plt.subplot(2, 2, ax)
+        ax += 1
+        plt.plot([j for j in range(cur_d_df.shape[0])], cur_d_df["rssi"])
+        plt.xlabel("time")
+        plt.ylabel("rssi")
+    plt.show()
 
 
 if __name__ == "__main__":

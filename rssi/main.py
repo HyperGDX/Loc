@@ -1,22 +1,30 @@
-import pandas as pd
-
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import cal_a_n
 import filter
 import n_sigma
+import tool_func
 
 
 def sigma_filter_proc(df: pd.DataFrame, time_start, time_stop, n, filter_kind):
-    # sigma
+    # draw raw data with time slot
+    first_time = df.loc[0][0]
+    time_df = df.loc[(df['time'] >= first_time+time_start) & (df['time'] <= first_time+time_start+time_stop)]
+    tool_func.draw_xtime_yrssi(time_df)
+
+    # do sigma
     sigma_data_lst = n_sigma.n_sigma(df, time_start, time_stop, n=n)
-    # filter
+    # do filter
     if filter_kind == "Mean":
         filter_data_lst = filter.MeanFilterDF(sigma_data_lst, win=3)
-    
+    # draw d & rssi after sigma and filter
     for f_d in filter_data_lst:
         plt.scatter(f_d["d"],f_d["rssi"])
     plt.show()
+    # draw time & rssi for one beacon
+
+
     return filter_data_lst
 
 
