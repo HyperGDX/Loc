@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def MeanFilter1D(data: pd.DataFrame, win=3):
+def MeanFilter1D(data: pd.DataFrame, win):
     # ans_df = pd.DataFrame(columns=["time", "d", "rssi"])
     d_l = data.shape[0]
     for i in range(d_l):
@@ -14,15 +14,14 @@ def MeanFilter1D(data: pd.DataFrame, win=3):
             else:
                 sum += data.iloc[j]
         data.iloc[i] = sum/win
-    return data
+    return data.reset_index(drop=True)
 
 
-def MeanFilterDF(df_lst, win=3):
+def MeanFilterDFlst(df_lst, win=5):
     ans_lst = []
     for df in df_lst:
-        ans_lst.append(MeanFilter1D(df,win))
+        ans_lst.append(MeanFilter1D(df, win))
     return ans_lst
-
 
 
 def MedianFilter1D(data, win=3):
@@ -50,13 +49,13 @@ def ABFilter1D(data, alpha=0.2):
     return ans
 
 
-def KalmanFilter1(data):
-    ans = []
+def KalmanFilter1D(df: pd.DataFrame):
+    new_df = df.copy(deep=True)
     # 滤波效果主要调整参数：
     # 过程噪声方差q(越小越相信预测，反之亦然)， 观测噪声方差r(越小越相信观测，反之亦然)
     q, r = 0.1, 2
     # 状态均值x， 过程噪声均值w，方差p
-    x, w, p = data[0], 0, 0
+    x, w, p = df["rssi"][0], 0, 0
 
     def kalman_filter(z):
         # 预测
@@ -69,23 +68,30 @@ def KalmanFilter1(data):
         p = (1-k) * p_
         return x
 
-    for i in data:
-        ans.append(kalman_filter(i))
-    return ans
+    for i in range(df.shape[0]):
+        new_df["rssi"][i] = kalman_filter(df["rssi"][i])
+    return new_df
 
 
-if __name__ == "__main__":
-    data = [-77, -95, -82, -80, -80, -84, -83, -78, -63, -78, -77, -86, -62, -83,
-            -79, -68, -79, -78, -83, -82, -73, -79, -73, -59, -78, -59, -72, -72,
-            -77, -84, -77, -72, -60, -80, -68, -79, -79, -66, -67, -79]
-    mean = MeanFilter1D(data, 5)
-    med = MedianFilter1D(data, 3)
-    ab = ABFilter1D(data, 0.2)
-    kal = KalmanFilter1(data)
+def KalmanFilterDFlst(df_lst):
+    new_df_lst = []
+    for df in df_lst:
+        new_df_lst.append(KalmanFilter1D(df))
+    return new_df_lst
 
-    plt.plot(data, "k", linewidth=2)
-    plt.plot(mean, "r")
-    plt.plot(med, "g")
-    plt.plot(ab, "b")
-    plt.plot(kal, "c")
-    plt.show()
+
+# if __name__ == "__main__":
+#     data = [-77, -95, -82, -80, -80, -84, -83, -78, -63, -78, -77, -86, -62, -83,
+#             -79, -68, -79, -78, -83, -82, -73, -79, -73, -59, -78, -59, -72, -72,
+#             -77, -84, -77, -72, -60, -80, -68, -79, -79, -66, -67, -79]
+#     mean = MeanFilter1D(data, 5)
+#     med = MedianFilter1D(data, 3)
+#     ab = ABFilter1D(data, 0.2)
+#     kal = KalmanFilter1(data)
+
+#     plt.plot(data, "k", linewidth=2)
+#     plt.plot(mean, "r")
+#     plt.plot(med, "g")
+#     plt.plot(ab, "b")
+#     plt.plot(kal, "c")
+#     plt.show()
