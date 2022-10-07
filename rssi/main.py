@@ -30,10 +30,10 @@ if __name__ == "__main__":
     time_begin = 0
     time_stop = 60
     sigma = 1.5
-    win = 7
+    win = 5
     ### read raw data ###
     # raw_df = pd.read_csv("new_rssi/data/rssi_d/rssi_d.csv")
-    raw_df = pd.read_csv("new_rssi/data/rssi_d/test.csv")
+    raw_df = pd.read_csv("rssi/data/rssi_d/test_best2.csv")
     # raw_df = pd.read_csv(r"new_rssi\data\rssi_d\rssi_d.csv")
 
     ### time slot ###

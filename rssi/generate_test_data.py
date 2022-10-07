@@ -18,7 +18,7 @@ for t in range(60):
     for i in test_loc:
         if (t >= 10) & (t <= 20):
             cur_d = cal_func.cal_2pos_dist(i, beacon_loc[0])
-            cur_rssi = cal_func.d2rssi(cur_d, a=random.gauss(50, 3), n=random.gauss(45, 3))
+            cur_rssi = cal_func.d2rssi(cur_d, a=random.gauss(42, 4), n=random.gauss(38, 4))
             cur_data = [t, round(cur_d, 4), round(cur_rssi, 4)]
             test_data.append(cur_data)
         else:
@@ -28,4 +28,4 @@ for t in range(60):
             test_data.append(cur_data)
 
 test_df = pd.DataFrame(columns=["time", "d", "rssi"], data=test_data)
-test_df.to_csv("new_rssi/data/rssi_d/test.csv", index=False)
+test_df.to_csv("rssi/data/rssi_d/test.csv", index=False)
