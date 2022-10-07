@@ -32,3 +32,9 @@ def draw_an(a, n):
     plt.plot(x, y, c="r")
     ybase = cal_func.d2rssi(x, a=45, n=40)
     plt.plot(x, ybase, c="g")
+
+
+def draw_circles(circles_geo):
+    for cir in circles_geo:
+        x, y = cir.exterior.xy
+        plt.plot(x, y)

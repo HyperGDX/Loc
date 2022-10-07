@@ -1,5 +1,7 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def cal_2pos_dist(pos1, pos2):
@@ -12,24 +14,26 @@ def cal_2pos_dist(pos1, pos2):
     return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
 
 
-def d2rssi(d, a=45, n=40):
+def d2rssi(d, a=-45, n=4):
     """
     将单个距离换算成rssi,输入的rssi为负值
     """
-    rssi = n * np.log10(d) + a
+    rssi = -1 * (a - 10 * n * math.log10(d))
     return rssi
 
 
-def d2r_func(x, a, b):
-    return a + b * np.log10(x)
-
-
-def rssi2d(rssi, a=45, n=40):
+def rssi2d(rssi, a=-45, n=4):
     """
     将单个rssi换算成距离,输出的rssi为负值
     """
-    d = 10 ** ((rssi-a) / n)
+    d = 10 ** ((a + rssi) / (10 * n))
     return d
+
+
+def draw_circles(circles_geo):
+    for cir in circles_geo:
+        x, y = cir.exterior.xy
+        plt.plot(x, y)
 
 
 def insec(p1, r1, p2, r2):
@@ -79,7 +83,16 @@ def cal_deg(p, q, r):
         return None
 
 
+def draw_xtime_yrssi(df_lst):
+    ax = 1
+    for df in df_lst:
+        plt.subplot(2, 2, ax)
+        ax += 1
+        plt.plot([j for j in range(df.shape[0])], df["rssi"])
+        plt.xlabel("time")
+        plt.ylabel("rssi")
+    # plt.show()
+
+
 if __name__ == "__main__":
-    rssi = 90
-    d = rssi2d(rssi)
-    print(d)
+    print(cal_deg((0, 0), (1, 1), (2, 0)))
