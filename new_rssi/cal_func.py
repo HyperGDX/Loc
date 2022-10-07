@@ -16,8 +16,12 @@ def d2rssi(d, a=45, n=40):
     """
     将单个距离换算成rssi,输入的rssi为负值
     """
-    rssi = n * math.log10(d) + a
+    rssi = n * np.log10(d) + a
     return rssi
+
+
+def d2r_func(x, a, b):
+    return a + b * np.log10(x)
 
 
 def rssi2d(rssi, a=45, n=40):
