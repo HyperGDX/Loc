@@ -1,12 +1,14 @@
 from statistics import mean
 import numpy as np
-import tool_func
+import cal_func
 import shapely
 from shapely import geometry
 import matplotlib.pyplot as plt
+import draw_func
 
 beacon_loc = [(0, 0), (0, 4), (4, 0), (4, 4)]
 test_loc = (1.25, 2.5)
+plt.scatter(test_loc[0], test_loc[1], marker="*")
 
 test_d = [2.7951, 1.9526, 3.7165, 3.1325]
 test_rssi = [62.8558, 56.6242, 67.8054, 64.8356]
@@ -15,6 +17,13 @@ test_rssi2d_gauss = [2.4715, 3.1255, 3.5967, 3.567]
 # for i in test_rssi_gauss:
 #     test_rssi2d_gauss.append(round(tool_func.rssi2d(i), 4))
 # print(test_rssi2d_gauss)
+
+
+def on_circle(cir_loc, cir_r, loc, jingdu):
+    tmp = (loc[0]-cir_loc[0])**2+(loc[1]-cir_loc[1])**2 - cir_r**2
+    if abs(tmp) <= jingdu:
+        return True
+    return False
 
 
 def gen_circle_geo(beacon_loc, d):
@@ -26,7 +35,7 @@ def gen_circle_geo(beacon_loc, d):
 
 
 def cal_inter(circles):
-    tool_func.draw_circles(circles)
+    draw_func.draw_circles(circles)
     inter = circles[0]
     for c in circles:
         inter = inter.intersection(c)
@@ -44,7 +53,7 @@ def cal_real_ext(inter):
     inter_xy_add = inter_xy + [inter_xy[0]]
     real_ext = []
     for i in range(len(inter_xy)-1):
-        deg = tool_func.cal_deg(inter_xy_add[i], inter_xy_add[i+1], inter_xy_add[i+2])
+        deg = cal_func.cal_deg(inter_xy_add[i], inter_xy_add[i+1], inter_xy_add[i+2])
         if deg == None:
             continue
         if abs(deg) > 10:
@@ -60,9 +69,22 @@ def cal_centroid_norm(ext):
     return (cal_cen_xs_mean, cal_cen_ys_mean)
 
 
+def cal_centroid_jiaquan(ext):
+
+    return
+
+
 if __name__ == "__main__":
     inter = cal_inter(gen_circle_geo(beacon_loc, test_rssi2d_gauss))
+
     real_ext = cal_real_ext(inter)
+    for l in real_ext:
+        plt.scatter(l[0], l[1], c="b")
     centroid_norm = cal_centroid_norm(real_ext)
+
     print(centroid_norm)
+    plt.scatter(centroid_norm[0], centroid_norm[1], marker="p")
     print(inter.centroid)
+    plt.xlim((0, 4))
+    plt.ylim((0, 4))
+    plt.show()
