@@ -83,8 +83,9 @@ if __name__ == "__main__":
     centroid_norm = cal_centroid_norm(real_ext)
 
     print(centroid_norm)
+    print(cal_func.cal_2pos_dist(centroid_norm, test_loc))
     plt.scatter(centroid_norm[0], centroid_norm[1], marker="p")
-    print(inter.centroid)
+
     plt.xlim((0, 4))
     plt.ylim((0, 4))
     plt.show()
