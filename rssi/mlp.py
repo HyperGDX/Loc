@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import mydataset
 
 net = nn.Sequential(
-    nn.Linear(1, 16),
+    nn.Linear(9, 16),
     nn.RReLU(),
     nn.Linear(16, 32),
     nn.RReLU(),
