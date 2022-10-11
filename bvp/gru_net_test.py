@@ -214,3 +214,49 @@ class SimpleRNN(nn.Module):
         final_y = self.out(r_out[:, -1, :])  # Return only the last output of RNN.
 
         return final_y, h_state
+
+
+class Widar(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        # in: Batch*T_MAX*20*20*1
+        self.conv1 = TimeDistributed(nn.Conv2d(in_channels=20, out_channels=16, kernel_size=(5, 5)))
+
+    def forward(self, x):
+        y = nn.ReLU(self.conv1(x))
+        print(y.shape)
+
+        return y
+
+
+class TimeDistributed(nn.Module):
+    def __init__(self, module, batch_first=True):
+        super(TimeDistributed, self).__init__()
+        self.module = module
+        self.batch_first = batch_first
+
+    def forward(self, x):
+
+        if len(x.size()) <= 2:
+            return self.module(x)
+
+        # Squash samples and timesteps into a single axis
+        x_reshape = x.contiguous().view(-1, x.size(-1))  # (samples * timesteps, input_size)
+
+        y = self.module(x_reshape)
+
+        # We have to reshape Y
+        if self.batch_first:
+            y = y.contiguous().view(x.size(0), -1, y.size(-1))  # (samples, timesteps, output_size)
+        else:
+            y = y.view(-1, x.size(1), y.size(-1))  # (timesteps, samples, output_size)
+
+        return y
+
+
+if __name__ == "__main__":
+    import numpy as np
+    test_data = torch.rand(64, 3000, 20, 20, 1)
+    net = Widar()
+    y = net(test_data)
+    print(y)
