@@ -1,7 +1,8 @@
-import keras
-import tensorflow as tf
+import torch
 
-inputs = tf.keras.Input(shape=(11, 20, 20, 1))
-conv_2d_layer = tf.keras.layers.Conv2D(16, (5, 5))
-outputs = tf.keras.layers.TimeDistributed(conv_2d_layer)(inputs)
-print(outputs.shape)
+a = torch.FloatTensor([[1.0, 2.0]])
+b = torch.FloatTensor([[3.0, 4.0]])
+
+c = torch.tensor([])
+c = torch.cat((a, b), dim=0)
+print(c)

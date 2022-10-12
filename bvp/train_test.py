@@ -1,5 +1,6 @@
-import net_test
+
 import math
+import myrnn
 
 import torch
 import torch.nn as nn
@@ -8,83 +9,75 @@ import torchvision.transforms as transforms
 from torch import Tensor
 from torch.autograd import Variable
 from torch.nn import Parameter
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import read_bvp
 
+ALL_MOTION = [1, 2, 3, 4, 5, 6]
+N_MOTION = len(ALL_MOTION)
+batch_size = 512
 
-batch_size = 128
-train_dataset = read_bvp.BVPDataSet()
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=read_bvp.collate_func)
+full_dataset = read_bvp.BVPDataSet(data_dir="data/BVP", motion_sel=ALL_MOTION)
+train_size = int(0.8 * len(full_dataset))
+test_size = len(full_dataset) - train_size
+train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(dataset=train_dataset, batch_size=batch_size)
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-EPOCH = 1000
+EPOCH = 500
+TIME_STEPS = full_dataset.get_T_max()
 
 
 # model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
-model = net_test.CustomRNN(input_size=20, hidden_size=128, num_layers=2, batch_first=True)
+model = myrnn.Widar3(time_steps=TIME_STEPS, in_ch=1, classes=6)
 model.to(device)
 
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.01
+learning_rate = 0.001
 
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
 
 
 for epoch in range(EPOCH):
+    #### train ####
     model.train()
     sum_loss = 0.0
-    sum_acc = 0.0
-    for idx, (img, label) in enumerate(train_loader):
+    total_correct = 0
+    total_sample = 0
+    for idx, data in enumerate(train_loader):
         # img, label = torch.unsqueeze(img, dim=1), torch.unsqueeze(label, dim=1)
-        img, label = img.to(device), label.to(device)
+        img, label = data[0].to(device), data[1].to(device)
         optimizer.zero_grad()
         output = model(img)
         train_loss = criterion(output, label)
         train_loss.backward()
         optimizer.step()
+        real_label = torch.max(label.data, 1)[1]
+        predicted = torch.max(output.data, 1)[1]
+        total_correct += (predicted == real_label).sum()
         sum_loss += train_loss.item()
     final_loss = sum_loss / idx
-    # if final_loss < best_loss:
-    #     best_loss = final_loss
-    #     torch.save(model.state_dict(), 'best_net_params.pth')
-    print(f"Epoch {epoch} lr: {optimizer.state_dict()['param_groups'][0]['lr']}", end=" ")
-    print('[%d] Train loss:%.09f' % (epoch, final_loss))
+
+    print(f"Epoch [{epoch}] lr: {optimizer.state_dict()['param_groups'][0]['lr']}", end=" ")
+    print('Train loss:', final_loss, end=" ")
+    print('Train acc:', (total_correct.item())/len(train_dataset)*100, end=" ")
     scheduler.step()
 
-    # if iter % 500 == 0:
-    #     # Calculate Accuracy
-    #     correct = 0
-    #     total = 0
-    #     # Iterate through test dataset
-    #     for images, labels in test_loader:
+    #### validation ####
+    model.eval()
 
-    #         if torch.cuda.is_available():
-    #             images = Variable(images.view(-1, seq_dim, input_dim).cuda())
-    #         else:
-    #             images = Variable(images.view(-1, seq_dim, input_dim))
-
-    #         # Forward pass only to get logits/output
-    #         outputs = model(images)
-
-    #         # Get predictions from the maximum value
-    #         _, predicted = torch.max(outputs.data, 1)
-
-    #         # Total number of labels
-    #         total += labels.size(0)
-
-    #         # Total correct predictions
-    #         #######################
-    #         #  USE GPU FOR MODEL  #
-    #         #######################
-    #         if torch.cuda.is_available():
-    #             correct += (predicted.cpu() == labels.cpu()).sum()
-    #         else:
-    #             correct += (predicted == labels).sum()
-
-    #     accuracy = 100 * correct / total
-
-    #     # Print Loss
-    #     print('Iteration: {}. Loss: {}. Accuracy: {}'.format(iter, loss.item(), accuracy))
+    size = len(test_loader.dataset)
+    num_batches = len(test_loader)
+    test_loss, correct = 0, 0
+    with torch.no_grad():
+        for img, label in test_loader:
+            img, label = data[0].to(device), data[1].to(device)
+            pred = model(img)
+            test_loss += criterion(pred, label).item()
+            correct += (pred.argmax(1) == label.argmax(1)).type(torch.float).sum().item()
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f}")
