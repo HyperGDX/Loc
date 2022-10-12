@@ -1,13 +1,7 @@
-import torch
-from torch.nn.utils.rnn import pad_sequence
-import numpy as np
+import keras
+import tensorflow as tf
 
-
-b = np.ones(((10, 10, 6)))
-
-
-# c = torch.ones((20, 10, 10))
-# abc = pad_sequence([a, b, c], batch_first=True, padding_value=0)
-# print(abc)
-b = np.transpose(b, axes=[2, 0, 1])
-print(b.shape)
+inputs = tf.keras.Input(shape=(11, 20, 20, 1))
+conv_2d_layer = tf.keras.layers.Conv2D(16, (5, 5))
+outputs = tf.keras.layers.TimeDistributed(conv_2d_layer)(inputs)
+print(outputs.shape)

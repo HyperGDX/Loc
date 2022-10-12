@@ -1,4 +1,4 @@
-import gru_net_test
+import net_test
 import math
 
 import torch
@@ -21,7 +21,7 @@ EPOCH = 1000
 
 
 # model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
-model = gru_net_test.CustomRNN(input_size=20, hidden_size=128, num_layers=2, batch_first=True)
+model = net_test.CustomRNN(input_size=20, hidden_size=128, num_layers=2, batch_first=True)
 model.to(device)
 
 

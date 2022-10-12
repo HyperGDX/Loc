@@ -219,18 +219,37 @@ class SimpleRNN(nn.Module):
 class Widar(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # in: Batch*T_MAX*20*20*1
-        self.conv1 = TimeDistributed(nn.Conv2d(in_channels=20, out_channels=16, kernel_size=(5, 5)))
+        # in: Batch*  T_MAX*20*20*1
+        # self.timedis1 = TimeDistributed(nn.Conv2d(in_channels=20, out_channels=16, kernel_size=(5, 5)))
+        # self.timedis2 = TimeDistributed(nn.Flatten())
+        # self.timedis3 = TimeDistributed(nn.ReLU(n
+        self.timedis = TimeDistributed2(nn.Conv2d, 25, 1, 16, (5, 5))
+        # self.timedis = TimeDistributed2(nn.Conv2d, time_steps=100, 1, 8, (3, 3), 2,   1, True)
 
     def forward(self, x):
-        y = nn.ReLU(self.conv1(x))
-        print(y.shape)
+        x = self.timedis(x)
+        return x
 
-        return y
+
+class TimeDistributed2(nn.Module):
+    def __init__(self, layer, time_steps, *args):
+        super(TimeDistributed2, self).__init__()
+
+        self.layers = nn.ModuleList([layer(*args) for i in range(time_steps)])
+
+    def forward(self, x):
+
+        batch_size, time_steps, C, H, W = x.size()
+        output = torch.tensor([])
+        for i in range(time_steps):
+            output_t = self.layers[i](x[:, i, :, :, :])
+            output_t = y.unsqueeze(1)
+            output = torch.cat((output, output_t), 1)
+        return output
 
 
 class TimeDistributed(nn.Module):
-    def __init__(self, module, batch_first=True):
+    def __init__(self, module, batch_first=False):
         super(TimeDistributed, self).__init__()
         self.module = module
         self.batch_first = batch_first
@@ -256,7 +275,8 @@ class TimeDistributed(nn.Module):
 
 if __name__ == "__main__":
     import numpy as np
-    test_data = torch.rand(64, 3000, 20, 20, 1)
+    test_data = torch.rand(64, 25, 1, 20, 20)
+
     net = Widar()
     y = net(test_data)
-    print(y)
+    print(y.shape)
