@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 class Dataset95(Dataset):
     def __init__(self) -> None:
         super().__init__()
-        raw_df = pd.read_csv(r"rssi\data\9.5\2022_9_5_bt_data_static.csv", header=0)
+        raw_df = pd.read_csv("rssi/data/9.5/2022_9_5_bt_data_static.csv", header=0)
         self.data_df = raw_df[["rel_x", "rel_y",
                                "rssi1", "rssi2", "rssi3", "rssi4",
                                "rssi5", "rssi6", "rssi7", "rssi8", "rssi9"]]

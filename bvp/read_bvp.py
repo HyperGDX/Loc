@@ -86,10 +86,14 @@ class BVPDataSet(Dataset):
                 data_normed_1 = self.normalize_data(data_1)
 
                 # Update T_MAX
+
                 if t_max < np.array(data_1).shape[2]:
                     t_max = np.array(data_1).shape[2]
             except scipy.io.matlab._miobase.MatReadError:
                 print(f"{file_path} has no data")
+                continue
+            except IndexError:
+                print(f"{file_path} Index error")
                 continue
 
                 # Save List
@@ -107,6 +111,7 @@ class BVPDataSet(Dataset):
         label = np.array(label)
         label_onehot = np.eye(6)[label-1]
         # data(ndarray): [N,T_MAX,20,20,1], label(ndarray): [N,N_MOTION]
+        print("load all data finish")
         return data, label_onehot, t_max
 
     def get_T_max(self):

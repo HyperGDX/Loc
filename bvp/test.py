@@ -1,8 +1,16 @@
 import torch
 
-a = torch.FloatTensor([[1.0, 2.0]])
-b = torch.FloatTensor([[3.0, 4.0]])
 
-c = torch.tensor([])
-c = torch.cat((a, b), dim=0)
-print(c)
+def get_train_device():
+    device = torch.device("cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    return device
+
+
+if __name__ == "__main__":
+    a = get_train_device()
+    print(a)

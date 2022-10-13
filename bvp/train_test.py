@@ -23,7 +23,16 @@ train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size]
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(dataset=train_dataset, batch_size=batch_size)
-device = "cuda" if torch.cuda.is_available() else "cpu"
+def get_train_device():
+    device = torch.device("cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    return device
+
+device = get_train_device()
 EPOCH = 500
 TIME_STEPS = full_dataset.get_T_max()
 
