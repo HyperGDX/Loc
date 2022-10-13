@@ -34,7 +34,6 @@ class BVPDataSet(Dataset):
         data_1_max_rep = np.tile(data_1_max, (data_1.shape[0], data_1.shape[1], 1))
         data_1_min_rep = np.tile(data_1_min, (data_1.shape[0], data_1.shape[1], 1))
         data_1_norm = (data_1 - data_1_min_rep) / (data_1_max_rep - data_1_min_rep)
-        # data_1_norm = np.transpose(data_1_norm, (2, 0, 1))
         return data_1_norm
 
     def zero_padding(self, data, T_MAX):
@@ -58,17 +57,21 @@ class BVPDataSet(Dataset):
         t_max = 0
         data = []
         label = []
-
-        for file_path in data_name_lst:
+        data_len = len(data_name_lst)
+        for idx, file_path in enumerate(data_name_lst):
+            if idx % 100 == 0:
+                print(f"Load {round(idx/data_len*100,2)}%")
+            if idx == data_len-1:
+                print("Load all mat")
             # data/20181109-VS/6-link/user3/user3-1-1-1-1-1-1e-07-100-20-100000-L0.mat
             data_file_name = file_path.split("/")[-1]
             try:
 
                 data_1 = scio.loadmat(file_path)['velocity_spectrum_ro']
                 label_1 = int(data_file_name.split('-')[1])
-                location = int(data_file_name.split('-')[2])
-                orientation = int(data_file_name.split('-')[3])
-                repetition = int(data_file_name.split('-')[4])
+                # location = int(data_file_name.split('-')[2])
+                # orientation = int(data_file_name.split('-')[3])
+                # repetition = int(data_file_name.split('-')[4])
 
                 # Select Motion
                 if (label_1 not in motion_sel):
@@ -86,7 +89,6 @@ class BVPDataSet(Dataset):
                 data_normed_1 = self.normalize_data(data_1)
 
                 # Update T_MAX
-
                 if t_max < np.array(data_1).shape[2]:
                     t_max = np.array(data_1).shape[2]
             except scipy.io.matlab._miobase.MatReadError:
@@ -129,14 +131,12 @@ class BVPDataSet(Dataset):
                     if post_name == file_type:
                         f_list.append(file_name + post_name)
                 else:    # 如果是文件夹，递归调用
-                    print("find file from:", sp)
                     files_list(full_sub_path)
-
         files_list(path)
         return f_list
 
 
 if __name__ == "__main__":
     # ds = BVPDataSet(path_to_data="data/20181109-VS/6-link/user1", motion_sel=ALL_MOTION)
-    ds = BVPDataSet(data_dir="data/BVP/20181211-VS", motion_sel=ALL_MOTION)
+    ds = BVPDataSet(data_dir="data/BVP", motion_sel=ALL_MOTION)
     print(len(ds))

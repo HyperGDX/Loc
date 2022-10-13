@@ -39,7 +39,7 @@ train_size = int(0.8 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
 
-train_dataloader = DataLoader(train_dataset, batch_size=256, shuffle=True)
+train_dataloader = DataLoader(full_dataset, batch_size=256, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=256)
 EPOCH = 2000
 loss_fun = nn.MSELoss()

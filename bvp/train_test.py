@@ -1,15 +1,8 @@
-
-import math
-import myrnn
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.transforms as transforms
-from torch import Tensor
-from torch.autograd import Variable
-from torch.nn import Parameter
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, random_split
+
+import myrnn
 import read_bvp
 
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
@@ -23,6 +16,8 @@ train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size]
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(dataset=train_dataset, batch_size=batch_size)
+
+
 def get_train_device():
     device = torch.device("cpu")
     if torch.backends.mps.is_available():
@@ -31,6 +26,7 @@ def get_train_device():
     elif torch.cuda.is_available():
         device = torch.device("cuda")
     return device
+
 
 device = get_train_device()
 EPOCH = 500
