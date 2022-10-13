@@ -7,10 +7,10 @@ import read_bvp
 
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
-batch_size = 512
+batch_size = 256
 
-full_dataset = read_bvp.BVPDataSet(data_dir="data/BVP", motion_sel=ALL_MOTION)
-train_size = int(0.8 * len(full_dataset))
+full_dataset = read_bvp.BVPDataSet(data_dir="data/20181109-VS/6-link/user1", motion_sel=ALL_MOTION)
+train_size = int(0.9 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
 
@@ -34,7 +34,7 @@ TIME_STEPS = full_dataset.get_T_max()
 
 
 # model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
-model = myrnn.Widar3(time_steps=TIME_STEPS, in_ch=1, classes=6)
+model = myrnn.MyWidar(time_steps=TIME_STEPS, in_ch=1, classes=6)
 model.to(device)
 
 

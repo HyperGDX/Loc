@@ -10,16 +10,18 @@ class TimeDistributed(nn.Module):
         self.layers = nn.ModuleList([layer(*args) for i in range(time_steps)])
 
     def forward(self, x):
+        cur_device = x.device
         xsize = x.size()
         time_steps = xsize[1]
-        output = torch.tensor([]).to(device="cuda")
+        output = torch.tensor([]).to(cur_device)
+        # output = torch.tensor([]).to(device="cuda")
         for i in range(time_steps):
             if len(xsize) == 5:
                 output_t = self.layers[i](x[:, i, :, :, :])
             if len(xsize) == 3:
                 output_t = self.layers[i](x[:, i, :])
             try:
-                output_t = output_t.unsqueeze(1).to(device="cuda")
+                output_t = output_t.unsqueeze(1)
             except:
                 print("er")
             output = torch.cat((output, output_t), 1)
@@ -29,22 +31,71 @@ class TimeDistributed(nn.Module):
 class Widar3(nn.Module):
     def __init__(self, time_steps, in_ch=1, classes=6) -> None:
         super().__init__()
-        self.td_conv2d = TimeDistributed(time_steps, nn.Conv2d,  in_ch, 16, (5, 5))
+        self.td_conv2d = TimeDistributed(time_steps, nn.Conv2d,  in_ch, 16, (3, 3))
+        self.relu1 = TimeDistributed(time_steps, nn.ReLU)
+        self.td_dropout1 = TimeDistributed(time_steps, nn.Dropout, 0.5)
         self.td_maxpl2d = TimeDistributed(time_steps, nn.MaxPool2d,  (2, 2))
         self.td_flatten = TimeDistributed(time_steps, nn.Flatten)
         self.td_dense1 = TimeDistributed(time_steps, nn.Linear,  1024, 64)
-        self.td_dropout1 = TimeDistributed(time_steps, nn.Dropout)
+        self.relu2 = TimeDistributed(time_steps, nn.ReLU)
+        self.td_dropout2 = TimeDistributed(time_steps, nn.Dropout, 0.7)
         self.td_dense2 = TimeDistributed(time_steps, nn.Linear,  64, 64)
+        self.relu3 = TimeDistributed(time_steps, nn.ReLU)
         self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
         self.dense3 = nn.Linear(128, classes)
 
     def forward(self, x):
-        y = F.relu(self.td_conv2d(x))
+        y = self.td_conv2d(x)
+        y = self.relu1(y)
+        y = self.td_dropout1(y)
         y = self.td_maxpl2d(y)
         y = self.td_flatten(y)
-        y = F.relu(self.td_dense1(y))
-        y = self.td_dropout1(y)
-        y = F.relu(self.td_dense2(y))
+        y = self.td_dense1(y)
+        y = self.relu2(y)
+        y = self.td_dropout2(y)
+        y = self.td_dense2(y)
+        y = self.relu3(y)
+        _, y = self.gru(y)
+        y = y.squeeze(dim=0)
+        y = F.dropout(y)
+        y = self.dense3(y)
+        return y
+
+
+class MyWidar(nn.Module):
+    def __init__(self, time_steps, in_ch=1, classes=6) -> None:
+        super().__init__()
+        self.conv1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Conv2d,  in_ch, 16, (3, 3)),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))  # 16,18,18
+
+        self.conv2 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Conv2d,  16, 32, (3, 3)),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))  # 32,16,16
+        self.maxpl2d = TimeDistributed(time_steps, nn.MaxPool2d,  (2, 2))  # 32,8,8
+
+        self.flatten = TimeDistributed(time_steps, nn.Flatten)
+        self.dense1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  2048, 1024),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.7))
+        self.dense2 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  1024, 64),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.7)
+            )
+        self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
+        self.dense3 = nn.Linear(128, classes)
+
+    def forward(self, x):
+        y = self.conv1(x)
+        y = self.conv2(y)
+        y = self.maxpl2d(y)
+        y = self.flatten(y)
+        y = self.dense1(y)
+        y = self.dense2(y)
         _, y = self.gru(y)
         y = y.squeeze(dim=0)
         y = F.dropout(y)
@@ -53,8 +104,7 @@ class Widar3(nn.Module):
 
 
 if __name__ == "__main__":
-    import numpy as np
     test_data = torch.rand(64, 25, 1, 20, 20)
-
-    net = Widar3(time_steps=25)
+    net = MyWidar(time_steps=25)
     y = net(test_data)
+    print(y.shape)
