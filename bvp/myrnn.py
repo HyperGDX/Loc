@@ -62,7 +62,41 @@ class Widar3(nn.Module):
         return y
 
 
-class MyWidar(nn.Module):
+class RawWidar3(nn.Module):
+
+    def __init__(self, time_steps, in_ch=1, classes=6) -> None:
+        super().__init__()
+        self.conv1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Conv2d,  in_ch, 16, (5, 5)),
+            TimeDistributed(time_steps, nn.ReLU))
+        # TimeDistributed(time_steps, nn.Dropout, 0.5))  # 16,16,16
+        self.maxpl2d = TimeDistributed(time_steps, nn.MaxPool2d,  (2, 2))  # 32,8,8
+        self.flatten = TimeDistributed(time_steps, nn.Flatten)
+        self.dense1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  1024, 64),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))
+        self.dense2 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  64, 64),
+            TimeDistributed(time_steps, nn.ReLU))
+        # TimeDistributed(time_steps, nn.Dropout, 0.5))
+        self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
+        self.dense3 = nn.Linear(128, classes)
+
+    def forward(self, x):
+        y = self.conv1(x)
+        y = self.maxpl2d(y)
+        y = self.flatten(y)
+        y = self.dense1(y)
+        y = self.dense2(y)
+        _, y = self.gru(y)
+        y = y.squeeze(dim=0)
+        y = F.dropout(y)
+        y = self.dense3(y)
+        return y
+
+
+class MyDeepWidar(nn.Module):
     def __init__(self, time_steps, in_ch=1, classes=6) -> None:
         super().__init__()
         self.conv1 = nn.Sequential(
@@ -85,7 +119,7 @@ class MyWidar(nn.Module):
             TimeDistributed(time_steps, nn.Linear,  1024, 64),
             TimeDistributed(time_steps, nn.ReLU),
             TimeDistributed(time_steps, nn.Dropout, 0.7)
-            )
+        )
         self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
         self.dense3 = nn.Linear(128, classes)
 
@@ -105,6 +139,6 @@ class MyWidar(nn.Module):
 
 if __name__ == "__main__":
     test_data = torch.rand(64, 25, 1, 20, 20)
-    net = MyWidar(time_steps=25)
+    net = RawWidar3(time_steps=25)
     y = net(test_data)
     print(y.shape)
