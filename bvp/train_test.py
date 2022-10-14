@@ -29,18 +29,18 @@ def get_train_device():
 
 
 device = get_train_device()
-EPOCH = 500
+EPOCH = 1000
 TIME_STEPS = full_dataset.get_T_max()
 
 
 # model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
-model = myrnn.MyDeepWidar(time_steps=TIME_STEPS, in_ch=1, classes=6)
+model = myrnn.RawWidar3(time_steps=TIME_STEPS, in_ch=1, classes=6)
 model.to(device)
 
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.1
+learning_rate = 0.01
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)
