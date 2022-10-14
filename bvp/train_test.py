@@ -7,15 +7,15 @@ import read_bvp
 
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
-batch_size = 256
+batch_size = 1024
 
-full_dataset = read_bvp.BVPDataSet(data_dir="data/20181109-VS/6-link/user1", motion_sel=ALL_MOTION)
+full_dataset = read_bvp.BVPDataSet(data_dir="data/BVP", motion_sel=ALL_MOTION)
 train_size = int(0.9 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
 
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(dataset=train_dataset, batch_size=batch_size)
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+test_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=8)
 
 
 def get_train_device():
@@ -40,10 +40,10 @@ model.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.001
+learning_rate = 0.01
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)
 
 
 for epoch in range(EPOCH):

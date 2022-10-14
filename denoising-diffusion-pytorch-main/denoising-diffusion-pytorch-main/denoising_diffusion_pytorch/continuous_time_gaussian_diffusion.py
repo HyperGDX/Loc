@@ -44,7 +44,7 @@ def unnormalize_to_zero_to_one(t):
 
 def right_pad_dims_to(x, t):
     """
-    比较x和t的维度 如果t大等就returnt else
+    比较x和t的维度 如果t大等就returnt t else
     """
     # ndim: numpy num dimension
     padding_dims = x.ndim - t.ndim
@@ -56,6 +56,10 @@ def right_pad_dims_to(x, t):
 
 
 class Residual(nn.Module):
+    """
+    残差
+    """
+
     def __init__(self, fn):
         super().__init__()
         self.fn = fn
@@ -65,6 +69,10 @@ class Residual(nn.Module):
 
 
 class MonotonicLinear(nn.Module):
+    """
+    linear的weight和bias都加上绝对值
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.net = nn.Linear(*args, **kwargs)
@@ -81,14 +89,25 @@ class MonotonicLinear(nn.Module):
 
 
 def log(t, eps=1e-20):
+    """
+    torch.clamp 设置上下界 超出设为默认值 怕log(0)报错就给个极小值
+    """
     return torch.log(t.clamp(min=eps))
 
 
 def beta_linear_log_snr(t):
+    """
+    y = -ln[e^(0.0001 + 10*t^2)-1]
+    """
+    b = 1e-4 + 10 * (t ** 2)
+    a = expm1(1e-4 + 10 * (t ** 2))
     return -log(expm1(1e-4 + 10 * (t ** 2)))
 
 
 def alpha_cosine_log_snr(t, s=0.008):
+    """
+    y = -ln[ cos(0.5(t+s)/(1+s)pi)^-2 - 1]
+    """
     return -log((torch.cos((t + s) / (1 + s) * math.pi * 0.5) ** -2) - 1, eps=1e-5)
 
 
@@ -104,11 +123,15 @@ class learned_noise_schedule(nn.Module):
         frac_gradient=1.
     ):
         super().__init__()
+        # 斜率
         self.slope = log_snr_min - log_snr_max
+        # 截距
         self.intercept = log_snr_max
 
         self.net = nn.Sequential(
+            # 加一个维度
             Rearrange('... -> ... 1'),
+            # weight bias 取绝对值
             MonotonicLinear(1, 1),
             Residual(nn.Sequential(
                 MonotonicLinear(1, hidden_dim),
@@ -313,8 +336,9 @@ class ContinuousTimeGaussianDiffusion(nn.Module):
 
 
 if __name__ == "__main__":
-    import numpy as np
-    x = np.zeros(shape=(1, 3, 2))
-    t = np.zeros(shape=(3, 2))
-    a = right_pad_dims_to(x, t)
-    print(a)
+    print(beta_linear_log_snr(torch.tensor(2.5)))
+    print(alpha_cosine_log_snr(torch.tensor(2.5)))
+    print(1)
+    a = torch.randn(size=(3, 256, 256))
+    b = rearrange(a, '... -> ... 1')
+    print(b.shape)

@@ -91,9 +91,12 @@ class BVPDataSet(Dataset):
                 # Update T_MAX
                 if t_max < np.array(data_1).shape[2]:
                     t_max = np.array(data_1).shape[2]
-            except scipy.io.matlab._miobase.MatReadError:
+            except scipy.io.matlab.miobase.MatReadError:
                 print(f"{file_path} has no data")
                 continue
+            # except scipy.io.matlab._miobase.MatReadError:
+            #     print(f"{file_path} has no data")
+            #     continue
             except IndexError:
                 print(f"{file_path} Index error")
                 continue
