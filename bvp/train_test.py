@@ -34,7 +34,7 @@ TIME_STEPS = full_dataset.get_T_max()
 
 
 # model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
-model = myrnn.MyWidar(time_steps=TIME_STEPS, in_ch=1, classes=6)
+model = myrnn.MyDeepWidar(time_steps=TIME_STEPS, in_ch=1, classes=6)
 model.to(device)
 
 
