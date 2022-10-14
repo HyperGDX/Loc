@@ -114,11 +114,10 @@ class MyDeepWidar(nn.Module):
         self.dense1 = nn.Sequential(
             TimeDistributed(time_steps, nn.Linear,  2048, 1024),
             TimeDistributed(time_steps, nn.ReLU),
-            TimeDistributed(time_steps, nn.Dropout, 0.7))
+            TimeDistributed(time_steps, nn.Dropout, 0.5))
         self.dense2 = nn.Sequential(
             TimeDistributed(time_steps, nn.Linear,  1024, 64),
-            TimeDistributed(time_steps, nn.ReLU),
-            TimeDistributed(time_steps, nn.Dropout, 0.7)
+            TimeDistributed(time_steps, nn.ReLU)
         )
         self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
         self.dense3 = nn.Linear(128, classes)
