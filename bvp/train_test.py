@@ -7,7 +7,7 @@ import read_bvp
 
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
-batch_size = 1024
+batch_size = 32
 
 full_dataset = read_bvp.BVPDataSet(data_dir="data/BVP", motion_sel=ALL_MOTION)
 train_size = int(0.9 * len(full_dataset))
