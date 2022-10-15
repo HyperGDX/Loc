@@ -75,7 +75,7 @@ class RawWidar3(nn.Module):
         self.dense1 = nn.Sequential(
             TimeDistributed(time_steps, nn.Linear,  1024, 64),
             TimeDistributed(time_steps, nn.ReLU),
-            TimeDistributed(time_steps, nn.Dropout, 0.7))
+            TimeDistributed(time_steps, nn.Dropout, 0.5))
         self.dense2 = nn.Sequential(
             TimeDistributed(time_steps, nn.Linear,  64, 64),
             TimeDistributed(time_steps, nn.ReLU))
@@ -91,7 +91,7 @@ class RawWidar3(nn.Module):
         y = self.dense2(y)
         _, y = self.gru(y)
         y = y.squeeze(dim=0)
-        y = F.dropout(y, 0.7)
+        y = F.dropout(y, 0.5)
         y = self.dense3(y)
         return y
 
