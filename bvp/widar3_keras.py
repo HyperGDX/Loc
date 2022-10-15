@@ -10,14 +10,14 @@ from keras.layers import Input, GRU, Dense, Flatten, Dropout, Conv2D, Conv3D, Ma
 from keras.models import Model, load_model
 import keras.backend as K
 from sklearn.metrics import confusion_matrix
-from keras.backend.tensorflow_backend import set_session
+from keras.backend import set_session
 from sklearn.model_selection import train_test_split
 
 
 # Parameters
 use_existing_model = False
 fraction_for_test = 0.1
-data_dir = 'Data/'
+data_dir = 'data/BVP'
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
 T_MAX = 0
@@ -144,10 +144,10 @@ if len(sys.argv) < 2:
     exit(0)
 if (sys.argv[1] == '1' or sys.argv[1] == '0'):
     os.environ["CUDA_VISIBLE_DEVICES"] = sys.argv[1]
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
-    set_session(tf.Session(config=config))
-    tf.set_random_seed(1)
+    set_session(tf.compat.v1.Session(config=config))
+    tf.random.set_seed(1)
 else:
     print('Wrong GPU number, 0 or 1 supported!')
     exit(0)
