@@ -44,7 +44,7 @@ learning_rate = 0.01
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 50, 100, 300, 500], gamma=0.1)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 50, 100, 800], gamma=0.1)
 
 for epoch in range(EPOCH):
     #### train ####
