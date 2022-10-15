@@ -6,26 +6,27 @@ import numpy as np
 import scipy.io as scio
 import tensorflow as tf
 import keras
-from keras.layers import Input, GRU, Dense, Flatten, Dropout, Conv2D, Conv3D, MaxPooling2D, MaxPooling3D, TimeDistributed
+from keras.layers import Input, GRU, Dense, Flatten, Dropout, Conv2D, Conv3D, MaxPooling2D, MaxPooling3D, TimeDistributed, BatchNormalization, SeparableConv2D
 from keras.models import Model, load_model
 import keras.backend as K
 from sklearn.metrics import confusion_matrix
 from keras.backend import set_session
 from sklearn.model_selection import train_test_split
 
-
-# Parameters
+#### Parameters ####
 use_existing_model = False
+# train:test = 9:1
 fraction_for_test = 0.1
-data_dir = 'data/BVP'
+# 带有递归
+data_dir = 'data/BVP/20181109-VS'
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
 T_MAX = 0
-n_epochs = 30
-f_dropout_ratio = 0.5
+n_epochs = 100
+f_dropout_ratio = 0.6
 n_gru_hidden_units = 128
-n_batch_size = 32
-f_learning_rate = 0.001
+n_batch_size = 64
+f_learning_rate = 0.01
 
 
 def normalize_data(data_1):
@@ -112,18 +113,54 @@ def load_data(path_to_data, motion_sel):
     return data, label
 
 
+# def assemble_model(input_shape, n_class):
+#     # input_shape (T_MAX, 20, 20, 1)
+#     model_input = Input(shape=input_shape, dtype='float32', name='name_model_input')    # (@,T_MAX,20,20,1)
+
+#     # Feature extraction part
+
+#     x = TimeDistributed(SeparableConv2D(16, kernel_size=(5, 5), activation='relu', data_format='channels_last',
+#                                         input_shape=input_shape))(model_input)   # (@,T_MAX,20,20,1)=>(@,T_MAX,16,16,16)
+#     x = TimeDistributed(BatchNormalization())(x)
+#     x = TimeDistributed(MaxPooling2D(pool_size=(2, 2)))(x)    # (@,T_MAX,16,16,16)=>(@,T_MAX,8,8,16)
+#     x = TimeDistributed(Flatten())(x)   # (@,T_MAX,8,8,16)=>(@,T_MAX,8*8*16)
+#     x = TimeDistributed(Dense(64, activation='relu'))(x)  # (@,T_MAX,8*8*16)=>(@,T_MAX,64)
+#     x = TimeDistributed(Dropout(f_dropout_ratio))(x)
+#     x = TimeDistributed(Dense(64, activation='relu'))(x)  # (@,T_MAX,64)=>(@,T_MAX,64)
+#     x = GRU(n_gru_hidden_units, return_sequences=False)(x)  # (@,T_MAX,64)=>(@,128)
+#     x = Dropout(f_dropout_ratio)(x)
+#     model_output = Dense(n_class, activation='softmax', name='name_model_output')(x)  # (@,128)=>(@,n_class)
+
+#     # Model compiling
+#     model = Model(inputs=model_input, outputs=model_output)
+#     model.compile(optimizer=keras.optimizers.RMSprop(lr=f_learning_rate),
+#                   loss='categorical_crossentropy',
+#                   metrics=['accuracy']
+#                   )
+#     return model
+
+
 def assemble_model(input_shape, n_class):
     # input_shape (T_MAX, 20, 20, 1)
     model_input = Input(shape=input_shape, dtype='float32', name='name_model_input')    # (@,T_MAX,20,20,1)
 
     # Feature extraction part
-    x = TimeDistributed(Conv2D(16, kernel_size=(5, 5), activation='relu', data_format='channels_last',
-                               input_shape=input_shape))(model_input)   # (@,T_MAX,20,20,1)=>(@,T_MAX,16,16,16)
-    x = TimeDistributed(MaxPooling2D(pool_size=(2, 2)))(x)    # (@,T_MAX,16,16,16)=>(@,T_MAX,8,8,16)
-    x = TimeDistributed(Flatten())(x)   # (@,T_MAX,8,8,16)=>(@,T_MAX,8*8*16)
-    x = TimeDistributed(Dense(64, activation='relu'))(x)  # (@,T_MAX,8*8*16)=>(@,T_MAX,64)
+
+    x = TimeDistributed(Conv2D(16, kernel_size=(3, 3), activation='relu', data_format='channels_last',
+                               input_shape=input_shape))(model_input)   # (@,T_MAX,20,20,1)=>(@,T_MAX,18,18,16)
+
+    x = TimeDistributed(BatchNormalization())(x)
+    x = TimeDistributed(MaxPooling2D(pool_size=(2, 2)))(x)    # (@,T_MAX,18,18,16)=>(@,T_MAX,8,8,16)
+    x = TimeDistributed(Conv2D(32, kernel_size=(3, 3), activation='relu', data_format='channels_last',
+                               input_shape=[input_shape[0], 18, 18, 16]))(model_input)   # (@,T_MAX,18,18,16)=>(@,T_MAX,16,16,32)
+    x = TimeDistributed(BatchNormalization())(x)
+    x = TimeDistributed(MaxPooling2D(pool_size=(2, 2)))(x)    # (@,T_MAX,16,16,32)=>(@,T_MAX,8,8,32)
+    x = TimeDistributed(Flatten())(x)   # (@,T_MAX,8,8,32)=>(@,T_MAX,8*8*32=2048)
+    x = TimeDistributed(Dense(1024, activation='relu'))(x)  # (@,T_MAX,2048)=>(@,T_MAX,1024)
     x = TimeDistributed(Dropout(f_dropout_ratio))(x)
-    x = TimeDistributed(Dense(64, activation='relu'))(x)  # (@,T_MAX,64)=>(@,T_MAX,64)
+    x = TimeDistributed(Dense(512, activation='relu'))(x)  # (@,T_MAX,1024)=>(@,T_MAX,512)
+    x = TimeDistributed(Dropout(f_dropout_ratio))(x)
+    x = TimeDistributed(Dense(64, activation='relu'))(x)  # (@,T_MAX,512)=>(@,T_MAX,64)
     x = GRU(n_gru_hidden_units, return_sequences=False)(x)  # (@,T_MAX,64)=>(@,128)
     x = Dropout(f_dropout_ratio)(x)
     model_output = Dense(n_class, activation='softmax', name='name_model_output')(x)  # (@,128)=>(@,n_class)
