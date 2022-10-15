@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 
 
 class TimeDistributed(nn.Module):
@@ -136,8 +137,55 @@ class MyDeepWidar(nn.Module):
         return y
 
 
+class MyWidar(nn.Module):
+    def __init__(self, time_steps, in_ch=1, classes=6) -> None:
+        super().__init__()
+        self.conv1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Conv2d,  in_ch, 16, (3, 3)),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))  # 16,18,18
+
+        self.conv2 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Conv2d,  16, 32, (3, 3)),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))  # 32,16,16
+        # self.maxpl2d = TimeDistributed(time_steps, nn.MaxPool2d,  (2, 2))  # 32,8,8
+
+        self.flatten = TimeDistributed(time_steps, nn.Flatten)
+        self.dense1 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  2048, 1024),
+            TimeDistributed(time_steps, nn.ReLU),
+            TimeDistributed(time_steps, nn.Dropout, 0.5))
+        self.dense2 = nn.Sequential(
+            TimeDistributed(time_steps, nn.Linear,  1024, 64),
+            TimeDistributed(time_steps, nn.ReLU)
+        )
+        self.gru = nn.GRU(input_size=64, hidden_size=128, batch_first=True)
+        self.dense3 = nn.Linear(128, classes)
+
+    def forward(self, x):
+        y = self.conv1(x)
+        y = self.conv2(y)
+        y = self.maxpl2d(y)
+        y = self.flatten(y)
+        y = self.dense1(y)
+        y = self.dense2(y)
+        _, y = self.gru(y)
+        y = y.squeeze(dim=0)
+        y = F.dropout(y)
+        y = self.dense3(y)
+        return y
+
+
+class MyResWidar(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.res1 = torchvision.models.resnet18()
+
+    def forward(self, x):
+        y = x
+        return y
+
+
 if __name__ == "__main__":
-    test_data = torch.rand(64, 25, 1, 20, 20)
-    net = RawWidar3(time_steps=25)
-    y = net(test_data)
-    print(y.shape)
+    net = MyResWidar()
