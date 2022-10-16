@@ -1,25 +1,19 @@
 from __future__ import print_function
-
+import time
 import os
-import sys
 import numpy as np
 import scipy.io as scio
 import tensorflow as tf
-import keras
-from keras.layers import Input, GRU, Dense, Flatten, Dropout, Conv2D, Conv3D, MaxPooling2D, MaxPooling3D, TimeDistributed, BatchNormalization, SeparableConv2D
-from keras.models import Model, load_model
-import keras.backend as K
-from sklearn.metrics import confusion_matrix
-from keras.backend import set_session
 from sklearn.model_selection import train_test_split
-import vae_tf
+from vae_tf import CVAE
+import matplotlib.pyplot as plt
 
 #### Parameters ####
 use_existing_model = False
 # train:test = 9:1
 fraction_for_test = 0.1
 # 带有递归
-data_dir = 'data/BVP/20181109-VS'
+data_dir = 'data/BVP/20181109-VS/6-link/user1'
 ALL_MOTION = [1, 2, 3, 4, 5, 6]
 N_MOTION = len(ALL_MOTION)
 T_MAX = 0
@@ -114,21 +108,6 @@ def load_data(path_to_data, motion_sel):
     return data, label
 
 
-# ==============================================================
-# Let's BEGIN >>>>
-if len(sys.argv) < 2:
-    print('Please specify GPU ...')
-    exit(0)
-if (sys.argv[1] == '1' or sys.argv[1] == '0'):
-    os.environ["CUDA_VISIBLE_DEVICES"] = sys.argv[1]
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.allow_growth = True
-    set_session(tf.compat.v1.Session(config=config))
-    tf.random.set_seed(1)
-else:
-    print('Wrong GPU number, 0 or 1 supported!')
-    exit(0)
-
 # Load data
 data, label = load_data(data_dir, ALL_MOTION)
 print('\nLoaded dataset of ' + str(label.shape[0]) + ' samples, each sized ' + str(data[0, :, :].shape) + '\n')
@@ -137,15 +116,77 @@ print('\nLoaded dataset of ' + str(label.shape[0]) + ' samples, each sized ' + s
 # One-hot encoding for train data
 label = onehot_encoding(label, N_MOTION)
 
-# Load or fabricate model
-if use_existing_model:
-    model = load_model('model_widar3_trained.h5')
-    model.summary()
-else:
-    model = vae_tf.CVAE(latent_dim=4, T_MAX=T_MAX)
-    model.summary()
-    model.fit({'name_model_input': data}, {'name_model_output': label},
-              batch_size=n_batch_size,
-              epochs=n_epochs,
-              verbose=1,
-              validation_split=0.1, shuffle=True)
+test_size = int(label.shape[0]*fraction_for_test)
+train_size = label.shape[0] - test_size
+batch_size = 32
+[data_train, data_test, label_train, label_test] = train_test_split(data, label, test_size=fraction_for_test)
+
+train_dataset = (tf.data.Dataset.from_tensor_slices(data_train)
+                 .shuffle(train_size).batch(batch_size))
+test_dataset = (tf.data.Dataset.from_tensor_slices(data_test)
+                .shuffle(test_size).batch(batch_size))
+
+optimizer = tf.keras.optimizers.Adam(1e-4)
+
+
+def log_normal_pdf(sample, mean, logvar, raxis=1):
+    log2pi = tf.math.log(2. * np.pi)
+    return tf.reduce_sum(
+        -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+        axis=raxis)
+
+
+def compute_loss(model, x):
+    mean, logvar = model.encode(x)
+    z = model.reparameterize(mean, logvar)
+    x_logit = model.decode(z)
+    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+    logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+    logpz = log_normal_pdf(z, 0., 0.)
+    logqz_x = log_normal_pdf(z, mean, logvar)
+    return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+
+
+@tf.function
+def train_step(model, x, optimizer):
+    """Executes one training step and returns the loss.
+
+    This function computes the loss and gradients, and uses the latter to
+    update the model's parameters.
+    """
+    with tf.GradientTape() as tape:
+        loss = compute_loss(model, x)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+
+epochs = 10
+# set the dimensionality of the latent space to a plane for visualization later
+latent_dim = 4
+num_examples_to_generate = 16
+
+# keeping the random vector constant for generation (prediction) so
+# it will be easier to see the improvement.
+random_vector_for_generation = tf.random.normal(
+    shape=[num_examples_to_generate, latent_dim])
+model = CVAE(latent_dim, T_MAX=T_MAX)
+
+
+# Pick a sample of the test set for generating output images
+assert batch_size >= num_examples_to_generate
+for test_batch in test_dataset.take(1):
+    test_sample = test_batch[0:num_examples_to_generate, :, :, :]
+
+
+for epoch in range(1, epochs + 1):
+    start_time = time.time()
+    for train_x in train_dataset:
+        train_step(model, train_x, optimizer)
+    end_time = time.time()
+
+    loss = tf.keras.metrics.Mean()
+    for test_x in test_dataset:
+        loss(compute_loss(model, test_x))
+    elbo = -loss.result()
+    print('Epoch: {}, Test set ELBO: {}, time elapse for current epoch: {}'
+          .format(epoch, elbo, end_time - start_time))

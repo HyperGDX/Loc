@@ -17,9 +17,9 @@ class CVAE(tf.keras.Model):
             [
                 tf.keras.layers.InputLayer(input_shape=(T_MAX, 20, 20, 1)),
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(
-                    filters=32, kernel_size=3, strides=(2, 2), activation='relu')),
+                    filters=16, kernel_size=3, strides=(1, 1), activation='relu')),
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(
-                    filters=64, kernel_size=3, strides=(2, 2), activation='relu')),
+                    filters=32, kernel_size=3, strides=(1, 1), activation='relu')),
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten()),
                 # No activation
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(latent_dim + latent_dim)),
@@ -28,18 +28,18 @@ class CVAE(tf.keras.Model):
 
         self.decoder = tf.keras.Sequential(
             [
-                tf.keras.layers.InputLayer(input_shape=(latent_dim,)),
-                tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(units=7*7*32, activation=tf.nn.relu)),
-                tf.keras.layers.TimeDistributed(tf.keras.layers.Reshape(target_shape=(7, 7, 32))),
+                tf.keras.layers.InputLayer(input_shape=(T_MAX, latent_dim,)),
+                tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(units=16*16*32, activation=tf.nn.relu)),
+                tf.keras.layers.TimeDistributed(tf.keras.layers.Reshape(target_shape=(16, 16, 32))),
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2DTranspose(
-                    filters=64, kernel_size=3, strides=2, padding='same',
+                    filters=16, kernel_size=3, strides=1,
                     activation='relu')),
                 tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2DTranspose(
-                    filters=32, kernel_size=3, strides=2, padding='same',
+                    filters=1, kernel_size=3, strides=1,
                     activation='relu')),
-                # No activation
-                tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2DTranspose(
-                    filters=1, kernel_size=3, strides=1, padding='same')),
+                # # No activation
+                # tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2DTranspose(
+                #     filters=1, kernel_size=3, strides=1, padding='same')),
             ]
         )
 
@@ -50,7 +50,7 @@ class CVAE(tf.keras.Model):
         return self.decode(eps, apply_sigmoid=True)
 
     def encode(self, x):
-        mean, logvar = tf.split(self.encoder(x), num_or_size_splits=2, axis=1)
+        mean, logvar = tf.split(self.encoder(x), num_or_size_splits=2, axis=2)
         return mean, logvar
 
     def reparameterize(self, mean, logvar):
@@ -63,3 +63,37 @@ class CVAE(tf.keras.Model):
             probs = tf.sigmoid(logits)
             return probs
         return logits
+
+
+optimizer = tf.keras.optimizers.Adam(1e-4)
+
+
+def log_normal_pdf(sample, mean, logvar, raxis=1):
+    log2pi = tf.math.log(2. * np.pi)
+    return tf.reduce_sum(
+        -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+        axis=raxis)
+
+
+def compute_loss(model: CVAE, x):
+    mean, logvar = model.encode(x)
+    z = model.reparameterize(mean, logvar)
+    x_logit = model.decode(z)
+    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+    logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+    logpz = log_normal_pdf(z, 0., 0.)
+    logqz_x = log_normal_pdf(z, mean, logvar)
+    return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+
+
+@tf.function
+def train_step(model, x, optimizer):
+    """Executes one training step and returns the loss.
+
+    This function computes the loss and gradients, and uses the latter to
+    update the model's parameters.
+    """
+    with tf.GradientTape() as tape:
+        loss = compute_loss(model, x)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
